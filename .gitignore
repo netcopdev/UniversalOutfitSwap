@@ -1,0 +1,20 @@
+# Build output
+dist/
+build/
+*.pbo
+*.bisign
+
+# Never commit signing material
+*.biprivatekey
+*.bikey
+
+# DayZ / tools temp
+*.log
+*.rpt
+*.tmp
+
+# IDE / OS
+.vs/
+.idea/
+.DS_Store
+Thumbs.db

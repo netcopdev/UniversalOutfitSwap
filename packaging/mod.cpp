@@ -1,0 +1,10 @@
+name = "Universal Outfit Swap";
+picture = "";
+logoSmall = "";
+logo = "";
+logoOver = "";
+tooltip = "Universal Outfit Swap";
+overview = "Swap, store, and equip complete wearable outfits using compatible existing storage.";
+action = "";
+author = "netcopdev";
+version = "0.1.2";

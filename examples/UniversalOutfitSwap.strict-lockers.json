@@ -1,0 +1,20 @@
+{
+  "Enabled": true,
+  "EnableSwapOutfit": true,
+  "EnableStoreOutfit": true,
+  "EnableEquipOutfit": true,
+  "MinWearableSlots": 9,
+  "RequireOpenWhenOpenable": true,
+  "NotifyOnSuccess": true,
+  "NotifyOnFailure": true,
+  "DebugLogging": false,
+  "RequiredSlots": [
+    "Body",
+    "Vest",
+    "Back",
+    "Legs",
+    "Feet"
+  ],
+  "IncludeClasses": [],
+  "ExcludeClasses": []
+}
