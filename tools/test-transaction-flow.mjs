@@ -72,19 +72,34 @@ console.log('Batch scheduling checks passed: 11 slots in one dispatch, reservati
 
 
 // Run actual reservation bookkeeping against owned versus existing junctures.
+// Match DayZ 1.29 exactly: NOT_REQUIRED=0, ACQUIRED=1, DENIED=2, ERROR=3.
 const acquire=compile('    bool Acquire(');
 const release=compile('    void ReleaseUnsent(PlayerBase player)');
-for(const partialFailure of [false,true]) {
+const junctureResults={
+    JUNCTURE_NOT_REQUIRED:0,
+    JUNCTURE_ACQUIRED:1,
+    JUNCTURE_DENIED:2,
+    ERROR:3
+};
+for(const testCase of [
+    {name:'not required',result:junctureResults.JUNCTURE_NOT_REQUIRED,expected:true,acquireNew:false},
+    {name:'acquired',result:junctureResults.JUNCTURE_ACQUIRED,expected:true,acquireNew:true},
+    {name:'denied after partial acquisition',result:junctureResults.JUNCTURE_DENIED,expected:false,acquireNew:true},
+    {name:'error after partial acquisition',result:junctureResults.ERROR,expected:false,acquireNew:true}
+]) {
     const held=new Set(['existing']);
     const transfer={Src1:{GetItem:()=> 'existing'}, Src2:{GetItem:()=> 'new'},
         Dst1:{},Dst2:{},OwnsJuncture1:false,OwnsJuncture2:false};
     const reservationEnv={player:{}, GetGame:()=>({HasInventoryJuncture:(p,item)=>held.has(item),ClearJunctureEx:(p,item)=>held.delete(item)}),
-        TryAcquireTwoInventoryJuncturesFromServer(){held.add('new');return partialFailure ? 0 : 1;},
-        JunctureRequestResult:{JUNCTURE_ACQUIRED:1,JUNCTURE_NOT_REQUIRED:2}};
-    assert.equal(acquire.call(transfer,reservationEnv),!partialFailure);
-    assert.equal(transfer.OwnsJuncture1,false);
-    assert.equal(transfer.OwnsJuncture2,true);
+        TryAcquireTwoInventoryJuncturesFromServer(){
+            if(testCase.acquireNew) held.add('new');
+            return testCase.result;
+        },
+        JunctureRequestResult:junctureResults};
+    assert.equal(acquire.call(transfer,reservationEnv),testCase.expected,testCase.name);
+    assert.equal(transfer.OwnsJuncture1,false,testCase.name+' preserves pre-existing first juncture');
+    assert.equal(transfer.OwnsJuncture2,testCase.acquireNew,testCase.name+' tracks only a newly acquired second juncture');
     release.call(transfer,reservationEnv);
-    assert.deepEqual([...held],['existing'],'unsent cleanup preserves existing ownership');
+    assert.deepEqual([...held],['existing'],testCase.name+' cleanup preserves existing ownership');
 }
-console.log('Reservation ownership and partial-acquisition cleanup checks passed.');
+console.log('Reservation enum, ownership and partial-acquisition cleanup checks passed.');
