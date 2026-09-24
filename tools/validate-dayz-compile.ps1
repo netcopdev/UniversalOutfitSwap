@@ -66,19 +66,10 @@ function Find-SteamExecutable([string]$relativePath)
 function Get-SmokeText(
     [string]$profilesDir,
     [string]$serverRoot,
-    [DateTime]$startedAtUtc,
-    [string]$stdoutPath,
-    [string]$stderrPath
+    [DateTime]$startedAtUtc
 )
 {
     $parts = @()
-
-    foreach ($path in @($stdoutPath, $stderrPath)) {
-        if (Test-Path -LiteralPath $path) {
-            $parts += Get-Content -LiteralPath $path -Raw -ErrorAction SilentlyContinue
-        }
-    }
-
     $logFiles = @()
     if (Test-Path -LiteralPath $profilesDir) {
         $logFiles += Get-ChildItem -LiteralPath $profilesDir -File -Recurse -ErrorAction SilentlyContinue |
@@ -215,17 +206,17 @@ class Missions
 };
 "@ | Set-Content -LiteralPath $ConfigPath -Encoding ASCII
 
-$StdoutPath = Join-Path $WorkRoot "server.stdout.log"
-$StderrPath = Join-Path $WorkRoot "server.stderr.log"
 $SuccessMarker = "[UniversalOutfitSwap] v$Version initialized."
 
 $ServerArguments = @(
-    ('-config="{0}"' -f $ConfigPath),
+    "-config=$ConfigPath",
     "-port=$Port",
-    ('-profiles="{0}"' -f $ProfilesDir),
-    ('-storage="{0}"' -f $StorageDir),
-    ('-mod="{0}"' -f $OutputRoot),
+    "-profiles=$ProfilesDir",
+    "-storage=$StorageDir",
+    "-mod=$OutputRoot",
     "-doLogs",
+    "-adminLog",
+    "-netLog",
     "-limitFPS=10"
 )
 
@@ -241,12 +232,25 @@ $lastText = ""
 $startedAtUtc = [DateTime]::UtcNow
 
 try {
-    $process = Start-Process -FilePath $DayZServer -ArgumentList $ServerArguments -WorkingDirectory $ServerRoot -RedirectStandardOutput $StdoutPath -RedirectStandardError $StderrPath -PassThru
+    # Keep launch semantics close to the documented Windows batch invocation.
+    # DayZ is not a console-stream application; its authoritative diagnostics
+    # are the RPT/script logs written through -profiles.
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $DayZServer
+    $startInfo.WorkingDirectory = $ServerRoot
+    $startInfo.UseShellExecute = $true
+    $startInfo.Arguments = ($ServerArguments -join " ")
+
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    if (-not $process) {
+        throw "Failed to start DayZ server process."
+    }
+
     $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
 
     while ([DateTime]::UtcNow -lt $deadline) {
         Start-Sleep -Milliseconds 250
-        $lastText = Get-SmokeText $ProfilesDir $ServerRoot $startedAtUtc $StdoutPath $StderrPath
+        $lastText = Get-SmokeText $ProfilesDir $ServerRoot $startedAtUtc
 
         $compileError = Get-CompileError $lastText
         if (-not [string]::IsNullOrWhiteSpace($compileError)) {
@@ -275,4 +279,6 @@ finally {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
         $process.WaitForExit()
     }
+
+    Write-Host "Compile-smoke artifacts: $WorkRoot"
 }
