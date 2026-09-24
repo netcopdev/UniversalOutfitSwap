@@ -53,7 +53,11 @@ dist\@UniversalOutfitSwap\keys\
 
 The private key is never copied into `dist` and should never be committed.
 
-## Non-default DayZ Tools location
+## DayZ Tools discovery
+
+When `-AddonBuilder` is omitted, the build script checks the standard Steam installation locations under both Program Files directories, then reads Steam's `steamapps/libraryfolders.vdf` to discover additional library folders.
+
+If discovery does not find the DayZ Tools installation, pass the executable explicitly:
 
 ```powershell
 .\tools\build-release.ps1 `
@@ -63,7 +67,6 @@ The private key is never copied into `dist` and should never be committed.
 ## Why `-packonly`
 
 This PBO contains scripts plus a simple `CfgPatches`/`CfgMods` config and no game item definitions. There is nothing that requires Binarize for the first-test release.
-
 
 ## Authoritative DayZ script compile smoke test
 

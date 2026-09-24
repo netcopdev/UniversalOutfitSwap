@@ -35,7 +35,7 @@ Use this only for a legitimate unusual outfit holder that intentionally has fewe
 
 Exact classnames that must never act as outfit storage, even if they happen to expose a full clothing-slot set.
 
-## Client/server note for v0.1.0
+## Client/server note for v0.1.2
 
 The JSON file is server-side. Clients use the compiled defaults for deciding whether to display an action; the server always revalidates using the authoritative server configuration before moving anything.
 

@@ -31,7 +31,7 @@ Only player-to-storage moves are performed. If any relevant destination storage 
 
 Only storage-to-player moves are performed. If any relevant destination player slot is occupied, the complete transaction is refused before the first move.
 
-This strict behavior is deliberate for v0.1.0. Silent per-slot skipping would make the final outfit less predictable.
+This strict behavior is deliberate for v0.1.2. Silent per-slot skipping would make the final outfit less predictable.
 
 ## Eligibility
 
