@@ -63,7 +63,13 @@ function Find-SteamExecutable([string]$relativePath)
     return ""
 }
 
-function Get-SmokeText([string]$profilesDir, [string]$stdoutPath, [string]$stderrPath)
+function Get-SmokeText(
+    [string]$profilesDir,
+    [string]$serverRoot,
+    [DateTime]$startedAtUtc,
+    [string]$stdoutPath,
+    [string]$stderrPath
+)
 {
     $parts = @()
 
@@ -73,14 +79,28 @@ function Get-SmokeText([string]$profilesDir, [string]$stdoutPath, [string]$stder
         }
     }
 
+    $logFiles = @()
     if (Test-Path -LiteralPath $profilesDir) {
-        $logFiles = Get-ChildItem -LiteralPath $profilesDir -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.Extension -in @(".RPT", ".log") } |
-            Sort-Object LastWriteTime
+        $logFiles += Get-ChildItem -LiteralPath $profilesDir -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Extension -in @(".RPT", ".log") -and
+                $_.LastWriteTimeUtc -ge $startedAtUtc.AddSeconds(-5)
+            }
+    }
 
-        foreach ($logFile in $logFiles) {
-            $parts += Get-Content -LiteralPath $logFile.FullName -Raw -ErrorAction SilentlyContinue
-        }
+    # Normally DayZ writes logs below -profiles. Also inspect fresh server-root
+    # logs so a malformed/ignored profile argument produces diagnostics instead
+    # of a blind timeout.
+    if (Test-Path -LiteralPath $serverRoot) {
+        $logFiles += Get-ChildItem -LiteralPath $serverRoot -File -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Extension -in @(".RPT", ".log") -and
+                $_.LastWriteTimeUtc -ge $startedAtUtc.AddSeconds(-5)
+            }
+    }
+
+    foreach ($logFile in ($logFiles | Sort-Object FullName -Unique)) {
+        $parts += Get-Content -LiteralPath $logFile.FullName -Raw -ErrorAction SilentlyContinue
     }
 
     return ($parts -join [Environment]::NewLine)
@@ -137,6 +157,18 @@ if (-not (Test-Path -LiteralPath $Mission)) {
     throw "DayZ mission was not found: $Mission. Pass -Mission '<mission directory>'."
 }
 $Mission = (Resolve-Path -LiteralPath $Mission).Path
+$MissionTemplate = Split-Path -Leaf $Mission
+
+$DefaultMissionRoot = (Resolve-Path -LiteralPath (Join-Path $ServerRoot "mpmissions")).Path
+$MissionParent = Split-Path -Parent $Mission
+if (-not [string]::Equals($MissionParent, $DefaultMissionRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+    # DayZ accepts a full mission path in server configuration. Forward slashes
+    # avoid ambiguity with config-string backslashes.
+    $MissionTemplate = $Mission.Replace('\', '/')
+}
+if ($MissionTemplate.Contains('"')) {
+    throw "Mission path cannot contain a double quote: $Mission"
+}
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $RepoRoot "dist\@UniversalOutfitSwap"
@@ -171,6 +203,16 @@ verifySignatures = 0;
 forceSameBuild = 0;
 disableVoN = 1;
 enableWhitelist = 0;
+instanceId = 1;
+storageAutoFix = 1;
+
+class Missions
+{
+    class DayZ
+    {
+        template = "$MissionTemplate";
+    };
+};
 "@ | Set-Content -LiteralPath $ConfigPath -Encoding ASCII
 
 $StdoutPath = Join-Path $WorkRoot "server.stdout.log"
@@ -182,7 +224,6 @@ $ServerArguments = @(
     "-port=$Port",
     ('-profiles="{0}"' -f $ProfilesDir),
     ('-storage="{0}"' -f $StorageDir),
-    ('-mission="{0}"' -f $Mission),
     ('-mod="{0}"' -f $OutputRoot),
     "-doLogs",
     "-limitFPS=10"
@@ -197,6 +238,7 @@ Write-Host "Logs   : $ProfilesDir"
 $process = $null
 $passed = $false
 $lastText = ""
+$startedAtUtc = [DateTime]::UtcNow
 
 try {
     $process = Start-Process -FilePath $DayZServer -ArgumentList $ServerArguments -WorkingDirectory $ServerRoot -RedirectStandardOutput $StdoutPath -RedirectStandardError $StderrPath -PassThru
@@ -204,7 +246,7 @@ try {
 
     while ([DateTime]::UtcNow -lt $deadline) {
         Start-Sleep -Milliseconds 250
-        $lastText = Get-SmokeText $ProfilesDir $StdoutPath $StderrPath
+        $lastText = Get-SmokeText $ProfilesDir $ServerRoot $startedAtUtc $StdoutPath $StderrPath
 
         $compileError = Get-CompileError $lastText
         if (-not [string]::IsNullOrWhiteSpace($compileError)) {
