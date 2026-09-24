@@ -22,7 +22,7 @@ A storage object is eligible by default when:
 2. it is not a transport, is not ruined, and neither player nor target inventory is currently locked;
 3. it exposes at least 6 canonical wearable slots;
 4. it exposes the required core slots `Body`, `Legs`, and `Feet`;
-5. if its config says `openable = 1`, it is currently open.
+5. if it is openable (via `CfgVehicles ... openable` or a registered Close action), it is currently open.
 
 This avoids treating incidental attachment holders (for example an object with only a `Back` slot) as outfit stations.
 
@@ -66,7 +66,7 @@ Signed build, supplying your key only at build time:
 
 `-PrivateKeyBase` is the key path **without** `.biprivatekey`; the build script appends the extension when passing the key to AddonBuilder. No private key belongs in this repository.
 
-If DayZ Tools is not installed at the default Steam location, pass:
+The build script auto-detects DayZ Tools from the standard Steam installation and its configured Steam library folders. If discovery does not find your installation, pass:
 
 ```powershell
 -AddonBuilder 'D:\SteamLibrary\steamapps\common\DayZ Tools\Bin\AddonBuilder\AddonBuilder.exe'
@@ -82,7 +82,7 @@ competing reverse commands.
 
 ## Weapons / full loadouts
 
-Not in v0.1.0. Player weapon slots (`Shoulder`, `Melee`) do not map universally to storage-mod slots (`Shoulder1`, `Shoulder2`, ...). A later version can add an explicit policy once tested rather than inventing a mapping.
+Not in v0.1.2. Player weapon slots (`Shoulder`, `Melee`) do not map universally to storage-mod slots (`Shoulder1`, `Shoulder2`, ...). A later version can add an explicit policy once tested rather than inventing a mapping.
 
 ## License
 

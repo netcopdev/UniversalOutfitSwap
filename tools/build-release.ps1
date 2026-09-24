@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$AddonBuilder = "E:\Steamlibrary\steamapps\common\DayZ Tools\Bin\AddonBuilder\AddonBuilder.exe",
+    [string]$AddonBuilder = "",
     [string]$PrivateKeyBase = "",
     [string]$OutputRoot = "",
     [switch]$Clean
@@ -10,6 +10,47 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+
+if ([string]::IsNullOrWhiteSpace($AddonBuilder)) {
+    $steamRoots = @()
+
+    $programFilesX86 = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ProgramFilesX86)
+    if (-not [string]::IsNullOrWhiteSpace($programFilesX86)) {
+        $steamRoots += Join-Path $programFilesX86 "Steam"
+    }
+
+    $programFiles = [System.Environment]::GetFolderPath([System.Environment+SpecialFolder]::ProgramFiles)
+    if (-not [string]::IsNullOrWhiteSpace($programFiles)) {
+        $steamRoots += Join-Path $programFiles "Steam"
+    }
+
+    $steamLibraryRoots = @()
+    foreach ($steamRoot in ($steamRoots | Select-Object -Unique)) {
+        if (-not (Test-Path -LiteralPath $steamRoot)) {
+            continue
+        }
+
+        $steamLibraryRoots += $steamRoot
+        $libraryFoldersPath = Join-Path $steamRoot "steamapps\libraryfolders.vdf"
+        if (Test-Path -LiteralPath $libraryFoldersPath) {
+            foreach ($line in (Get-Content -LiteralPath $libraryFoldersPath)) {
+                if ($line -match '^\s*"path"\s+"([^"]+)"') {
+                    $steamLibraryRoots += $Matches[1].Replace('\\', '\')
+                }
+            }
+        }
+    }
+
+    $AddonBuilder = $steamLibraryRoots |
+        Select-Object -Unique |
+        ForEach-Object { Join-Path $_ "steamapps\common\DayZ Tools\Bin\AddonBuilder\AddonBuilder.exe" } |
+        Where-Object { Test-Path -LiteralPath $_ } |
+        Select-Object -First 1
+
+    if ([string]::IsNullOrWhiteSpace($AddonBuilder)) {
+        throw "AddonBuilder was not found in the detected Steam libraries. Pass -AddonBuilder '<path>\AddonBuilder.exe'."
+    }
+}
 
 & (Join-Path $PSScriptRoot "check-source.ps1")
 $SourceDir = Join-Path $RepoRoot "src\UniversalOutfitSwap"
