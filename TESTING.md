@@ -2,13 +2,22 @@
 
 Use expendable gear and preferably a disposable test character for the first server run.
 
-## 1. Build / load sanity
+## 1. Build / authoritative compile sanity
 
-- Build unsigned first.
-- Confirm `UniversalOutfitSwap.pbo` exists in `dist/@UniversalOutfitSwap/addons/`.
-- Load the same build on client and server.
-- Check client and server RPT for `Can't compile` or `UniversalOutfitSwap` errors.
-- Confirm server creates `$profile:UniversalOutfitSwap/UniversalOutfitSwap.json`.
+Run:
+
+```powershell
+.\tools\validate-dayz-compile.ps1
+```
+
+Expected: `DAYZ SCRIPT COMPILE: PASS`. This builds a fresh PBO, starts the real
+DayZ dedicated server with a disposable profile/storage directory, fails on
+Game/World/Mission script compiler errors, and passes only after the UOS
+`MissionServer.OnInit()` marker is observed.
+
+Then load the same build on client and server for the multiplayer checks below.
+Confirm the normal server profile creates
+`$profile:UniversalOutfitSwap/UniversalOutfitSwap.json`.
 
 ## 2. Eligibility
 
@@ -141,8 +150,11 @@ commands while the original commands may still be in flight.
 - During latency/disconnect, no false success and no competing inverse commands.
 - Confirm preparation failure moves nothing and leaves items usable afterward.
 
-Run local checks with "node tools/test-transaction-flow.mjs" and
-".\tools\check-source.ps1". Scheduling tests execute extracted script control
-flow with mocked engine calls; they do not prove native visual simultaneity.
-AddonBuilder uses pack-only, so dedicated-server script compilation and the
-multiplayer visual/move/drop checks above remain required.
+Run the fast local checks with `node tools/test-transaction-flow.mjs` and
+`.\tools\check-source.ps1`. Scheduling tests execute extracted script control
+flow with mocked engine calls; they do not compile Enforce Script or prove native
+visual simultaneity.
+
+Before multiplayer testing, also run
+`.\tools\validate-dayz-compile.ps1`. That check uses the real DayZ dedicated
+server compiler. Multiplayer visual/move/drop checks remain required separately.

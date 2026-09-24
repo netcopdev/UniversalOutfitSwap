@@ -58,6 +58,12 @@ Unsigned test build:
 .\tools\build-release.ps1
 ```
 
+Authoritative DayZ script compile smoke test:
+
+```powershell
+.\tools\validate-dayz-compile.ps1
+```
+
 Signed build, supplying your key only at build time:
 
 ```powershell
