@@ -32,6 +32,16 @@ Test at least:
 
 If a legitimate storage does not qualify, add its exact classname temporarily to `IncludeClasses` and restart.
 
+### Client/server eligibility config sync
+
+With a multiplayer client connected, verify at least one non-default visibility rule:
+
+- disable one outfit action in server JSON, restart, reconnect, and confirm that action is absent client-side;
+- or add an otherwise ineligible storage classname to `IncludeClasses`, restart, reconnect, and confirm its applicable actions appear;
+- or add an eligible storage classname to `ExcludeClasses`, restart, reconnect, and confirm its actions are absent.
+
+The client RPT should log `Eligibility config synchronized from server.`. Respawn/reconnect must restore the same visibility without relying on compiled defaults.
+
 ## 3. Swap Outfit: both sides occupied
 
 Regression: first put different jackets in the player's and locker's Body slots,
@@ -150,8 +160,9 @@ commands while the original commands may still be in flight.
 - During latency/disconnect, no false success and no competing inverse commands.
 - Confirm preparation failure moves nothing and leaves items usable afterward.
 
-Run the fast local checks with `node tools/test-transaction-flow.mjs` and
-`.\tools\check-source.ps1`. Scheduling tests execute extracted script control
+Run the fast local checks with `node tools/test-transaction-flow.mjs`,
+`node tools/test-config-sync.mjs`, and `.\tools\check-source.ps1`.
+Scheduling tests execute extracted script control
 flow with mocked engine calls; they do not compile Enforce Script or prove native
 visual simultaneity.
 

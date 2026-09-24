@@ -40,6 +40,34 @@ class UOS_ConfigManager
         return s_Config;
     }
 
+    static void ApplyClientEligibilityConfig(
+        bool enabled,
+        bool enableSwapOutfit,
+        bool enableStoreOutfit,
+        bool enableEquipOutfit,
+        int minWearableSlots,
+        bool requireOpenWhenOpenable,
+        array<string> requiredSlots,
+        array<string> includeClasses,
+        array<string> excludeClasses)
+    {
+        if (!GetGame() || GetGame().IsServer())
+            return;
+
+        UOS_Config cfg = Get();
+        cfg.Enabled = enabled;
+        cfg.EnableSwapOutfit = enableSwapOutfit;
+        cfg.EnableStoreOutfit = enableStoreOutfit;
+        cfg.EnableEquipOutfit = enableEquipOutfit;
+        cfg.MinWearableSlots = minWearableSlots;
+        cfg.RequireOpenWhenOpenable = requireOpenWhenOpenable;
+        cfg.RequiredSlots = requiredSlots;
+        cfg.IncludeClasses = includeClasses;
+        cfg.ExcludeClasses = excludeClasses;
+
+        Normalize();
+    }
+
     static void LoadServerConfig()
     {
         if (s_ServerLoaded)

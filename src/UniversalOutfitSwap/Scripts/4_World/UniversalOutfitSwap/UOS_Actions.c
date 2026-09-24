@@ -17,6 +17,11 @@ class ActionUOSBase : ActionInteractBase
 
     override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
     {
+        // In multiplayer, never evaluate visibility against compiled defaults.
+        // The server sends the authoritative eligibility subset to this player.
+        if (!player || !player.UOS_HasEligibilityConfig())
+            return false;
+
         if (!UOS_Eligibility.IsOperationEnabled(m_UOSOperation))
             return false;
 

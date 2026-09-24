@@ -15,9 +15,12 @@ if ($privateKeys) {
 $configPath = Join-Path $RepoRoot 'src\UniversalOutfitSwap\config.cpp'
 $constantsPath = Join-Path $RepoRoot 'src\UniversalOutfitSwap\Scripts\3_Game\UniversalOutfitSwap\UOS_Constants.c'
 $actionRegistrationPath = Join-Path $RepoRoot 'src\UniversalOutfitSwap\Scripts\4_World\UniversalOutfitSwap\UOS_ActionRegistration.c'
+$actionsPath = Join-Path $RepoRoot 'src\UniversalOutfitSwap\Scripts\4_World\UniversalOutfitSwap\UOS_Actions.c'
+$configSyncPath = Join-Path $RepoRoot 'src\UniversalOutfitSwap\Scripts\4_World\UniversalOutfitSwap\UOS_ConfigSync.c'
+$missionServerPath = Join-Path $RepoRoot 'src\UniversalOutfitSwap\Scripts\5_Mission\UniversalOutfitSwap\UOS_MissionServer.c'
 $modCppPath = Join-Path $RepoRoot 'packaging\mod.cpp'
 
-$expected = @($configPath, $constantsPath, $actionRegistrationPath, $modCppPath)
+$expected = @($configPath, $constantsPath, $actionRegistrationPath, $actionsPath, $configSyncPath, $missionServerPath, $modCppPath)
 foreach ($file in $expected) {
     if (-not (Test-Path -LiteralPath $file)) {
         throw "Required file missing: $file"
@@ -26,6 +29,9 @@ foreach ($file in $expected) {
 
 $constants = Get-Content -LiteralPath $constantsPath -Raw
 $actionRegistration = Get-Content -LiteralPath $actionRegistrationPath -Raw
+$actions = Get-Content -LiteralPath $actionsPath -Raw
+$configSync = Get-Content -LiteralPath $configSyncPath -Raw
+$missionServer = Get-Content -LiteralPath $missionServerPath -Raw
 $config = Get-Content -LiteralPath $configPath -Raw
 $modCpp = Get-Content -LiteralPath $modCppPath -Raw
 $worldScripts = Get-ChildItem -LiteralPath (Join-Path $RepoRoot 'src\UniversalOutfitSwap\Scripts\4_World') -Recurse -File -Filter '*.c' |
@@ -46,6 +52,28 @@ if (($worldScripts -join "`n") -match '(?<!UOS_Operation\.)\bUOS_OP_(SWAP|STORE|
 foreach ($actionType in @('ActionUOSSwapOutfit', 'ActionUOSStoreOutfit', 'ActionUOSEquipOutfit')) {
     if (-not $actionRegistration.Contains("actions.Insert($actionType);")) {
         throw "Action type is not registered with ActionConstructor: $actionType"
+    }
+}
+if (-not $actions.Contains('player.UOS_HasEligibilityConfig()')) {
+    throw 'Action visibility is not gated on synchronized client eligibility config.'
+}
+foreach ($requiredSyncText in @(
+    'rpc.Send(player, UOS_RPC_CONFIG_SYNC, true, identity);',
+    'UOS_ConfigManager.ApplyClientEligibilityConfig(',
+    'm_UOSEligibilityConfigSynced = true;'
+)) {
+    if (-not $configSync.Contains($requiredSyncText)) {
+        throw "Client eligibility config synchronization requirement missing: $requiredSyncText"
+    }
+}
+foreach ($serverOnlyField in @('NotifyOnSuccess', 'NotifyOnFailure', 'DebugLogging')) {
+    if ($configSync.Contains("cfg.$serverOnlyField")) {
+        throw "Server-only config field must not be included in client eligibility sync: $serverOnlyField"
+    }
+}
+foreach ($readyHook in @('OnClientReadyEvent', 'OnClientReconnectEvent', 'OnClientRespawnEvent')) {
+    if (-not $missionServer.Contains($readyHook)) {
+        throw "Client eligibility config resend hook missing: $readyHook"
     }
 }
 if (($worldScripts -join "`n") -match '\bServer(SwapEntities|TakeToDst)\s*\(') {
