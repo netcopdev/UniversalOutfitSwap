@@ -24,13 +24,12 @@ With default settings, verify all of the following:
 6. if the target is openable (via `CfgVehicles ... openable` or a registered Close action), it is open;
 7. the action itself is enabled in server JSON.
 
-For v0.1.2, server JSON is not synchronized to clients for action visibility. A permissive server-only `IncludeClasses` override cannot make an action appear if the client-side compiled default filter rejects the object.
+On multiplayer clients, UOS actions remain hidden until the server eligibility snapshot arrives. The client RPT should contain `[UniversalOutfitSwap] Eligibility config synchronized from server.`. Server-side `IncludeClasses`, `ExcludeClasses`, thresholds, and action-enable settings then control client visibility.
 
 ## Action appears but server refuses it
 
-This usually means the authoritative server state differs from what the client used to display the action. Common reasons are:
+The server always revalidates immediately before mutation, so a visible action can still become invalid after it was shown. Common reasons are:
 
-- server JSON disables the action or excludes the classname;
 - target was closed/locked between action selection and execution;
 - inventory became locked/reserved;
 - an attached item rejects the opposite attachment location.

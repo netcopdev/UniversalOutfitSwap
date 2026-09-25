@@ -2,6 +2,8 @@ const string UOS_TAG = "[UniversalOutfitSwap]";
 const string UOS_CONFIG_DIR = "$profile:UniversalOutfitSwap";
 const string UOS_CONFIG_PATH = "$profile:UniversalOutfitSwap/UniversalOutfitSwap.json";
 const string UOS_VERSION = "0.1.2";
+const int UOS_CONFIG_SYNC_PROTOCOL = 1;
+const int UOS_RPC_CONFIG_SYNC = 1431261953;
 
 enum UOS_Operation
 {
